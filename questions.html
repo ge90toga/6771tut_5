@@ -1,0 +1,128 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<!-- saved from url=(0055)http://www.cse.unsw.edu.au/~cs6771/16s2/tuts/week6.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+    <title>CS6771 Tutorial - Week 6</title>
+    <link rel="stylesheet" type="text/css" href="chrome-extension://pkehgijcmpdhfbdbbnkijodmdjhbjlgp/skin/socialwidgets.css"></head>
+<body>
+<h2>CS6771 Tutorial 2016</h2>
+<h2>Week Six</h2>
+
+<h3>Dynamic Memory Management</h3>
+
+<strong>Topics Covered:</strong>
+<ul><li>Exception Handling</li>
+    <li>Lamda Functions</li>
+    <li>Shared and Weak Pointers</li>
+    <li>Unique Pointers and Ownership</li>
+    <li>Trailing Return Types</li>
+</ul>
+
+<ol>
+    <li><strong>Download</strong> the following starter code: <a href="http://www.cse.unsw.edu.au/~cs6771/16s2/tuts/School.cpp">School.cpp</a> <a href="http://www.cse.unsw.edu.au/~cs6771/16s2/tuts/School.hpp">School.hpp</a> <a href="http://www.cse.unsw.edu.au/~cs6771/16s2/tuts/tut.cpp">tut.cpp</a></li>
+    <li><strong>Consider</strong> a school enrolment system. The system contains information about courses offered and students enrolled.
+        The main School class object contains a collection of Course objects, a collection of Student objects and a collection of Locker objects for students to store their textbooks in.
+        The starter code encapsulates these key requirements.</li>
+    <li><strong>Read</strong> through the starter code files and ensure that you understand the relationships between the classes and the use of smart pointers, exception handling, and lamda functions.</li>
+    <li><strong>Compile</strong> the starter code using the command
+        <pre>g++ -std=c++11 -Wall -Werror tut.cpp School.cpp -o tut
+</pre></li>
+    <li><strong>The expected output</strong> of the tut.cpp file is:
+        <pre>can't add a duplicate course
+Can't find student 1234
+Student is already enrolled in this course
+CS1917 Roll
+Tom
+Jerry
+Homer
+Timetable for Homer 9315
+CS1917
+CS2911
+Homer has a locker: true
+Tom has a locker: false
+CS1917 Roll
+Jerry
+Homer
+Timetable for Homer 9315
+CS2911
+</pre>
+        <strong>However,</strong> there is some missing functionality in the starter code. The current output is:
+        <pre>Can't find student 1234
+CS1917 Roll
+Timetable for Homer 9315
+CS1917
+CS2911
+CS1917
+Homer has a locker: false
+Tom has a locker: false
+CS1917 Roll
+Timetable for Homer 9315
+CS2911
+</pre>
+        <strong>The current output</strong> is missing some error checking, the ability to correctly print a course roll and the ability to assign lockers to students.</li>
+    <li><strong>Correct the function addStudentToCourse</strong> to ensure that the student is enrolled correctly in the course:
+        <pre>// method to add a student to a course.
+void School::addStudentToCourse(unsigned int id, const std::string&amp; courseCode) {
+	auto courseObject = findCourse(courseCode);	// find the course object
+	// find student
+	auto studentObject = findStudent(id);
+
+	//TODO: try to add the student to the course.
+	// if the student can't be added to the course, e.g. they are already enrolled
+	// then return false.
+
+	// add the course object to a student's object
+	studentObject-&gt;addCourse(*courseObject);
+}
+</pre>
+        <strong>Hint:</strong> the courseObject can call it's member function addStudent in a manner similar to: (*courseObject)-&gt;addStudent(parameters)</li>
+    <li><strong>Modify the function addStudentToCourse</strong> further to throw std::runtime_error("Student is already enrolled in this course"); if the student is already enrolled in the course</li>
+    <li><strong>Correct the function printRoll</strong> to ensure that the names of the students enrolled in a course are printed:
+        <pre>// method to print the students in a course
+void School::Course::printRoll() const {
+	std::cout &lt;&lt; courseCode &lt;&lt; " Roll" &lt;&lt; std::endl;
+	for (auto wp : studentsInCourse) {
+		// TODO: print the names of the students in the course
+		// std::cout &lt;&lt; sp-&gt;getName() &lt;&lt; std::endl;
+	}
+}
+</pre>
+        <strong>Hint:</strong> You'll need to convert each weak_ptr to a shared_ptr to print the names. What happens if the object the weak_ptr is pointing to has been deleted?</li>
+    <li><strong>Correct the function assignLocker</strong> to correctly enable the student object to take ownership over a locker object
+        <pre>// method to transfer ownership of a locker to a student if
+// there is enough lockers available.
+bool School::assignLocker(unsigned int id) {
+	auto studentObject = findStudent(id);
+	if ( lockers.size() &gt; 0u) {
+		// TODO: assign the locker to the student
+		lockers.pop_back();
+		return true;
+	}
+	return false;
+}
+</pre>
+        <strong>Hint:</strong> You'll need to use std::move to get ownership over the unique_ptr</li>
+    <li><strong>Add a lamda function to the method addCourse</strong> to check that the course doesn't already exist
+        <pre>// create a course object and add it to the list of courses
+// return false if the course already exists
+bool School::addCourse(const std::string&amp; courseCode) {
+	// TODO: double check that the course doesn't already exist.
+	// create a new course object
+	courses.push_back(std::make_shared&lt;Course&gt;(courseCode));
+	return true;
+}
+</pre>
+        <strong>Hint:</strong> use the starter code below to get started, what will you need to do with the result of the lamda function?
+        <pre>auto result = std::find_if(courses.begin(),courses.end(),[&amp;courseCode] (std::shared_ptr&lt;Course&gt; c) {
+	// body of lamda function, need to compare the objects courseCode and c, return true if they are the same
+});
+</pre></li>
+    <li><strong>What would happen to a locker object</strong> that is owned by a student object when the student object is deleted. Would it return to the school's colletion of Locker objects? How may we achieve this requirement?</li>
+    <li><strong>Consider the findCourse function</strong>:
+        <pre>auto School::findCourse(const std::string&amp; courseCode) const -&gt; decltype(courses.begin())
+</pre>
+        <strong>What</strong> is the purpose of the trailing return type? <strong>What</strong> does decltype tell the compiler?</li>
+
+
+
+
+</ol></body></html>
